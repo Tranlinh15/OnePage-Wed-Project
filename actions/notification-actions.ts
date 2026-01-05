@@ -95,13 +95,13 @@ export async function createJoinRequestNotification(projectId: string) {
 
     await db.notification.create({
       data: {
-        userId: project.ownerId, // Người nhận là Leader
-        message: `${requesterName} muốn tham gia dự án "${project.name}"`, // Nội dung
-        link: `/projects/${project.id}/settings/members`, // Link khi bấm vào
-        type: "JOIN_REQUEST",
+        userId: project.ownerId, // 👈 Đảm bảo gửi đúng ID này
+        content: `${requesterName} muốn tham gia dự án "${project.name}"`,
+        link: `/projects/${projectId}`,
         isRead: false,
-        // Nếu DB của bạn có trường projectId hoặc requestId thì thêm vào dưới đây:
-        // projectId: project.id, 
+        type: "JOIN_REQUEST",
+        requestId: request.id,
+        projectId: project.id,
       },
     });
 
