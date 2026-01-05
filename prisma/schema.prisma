@@ -1,0 +1,113 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Model chính: Dự án
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  tags        String?  // Lưu dạng chuỗi cách nhau bởi dấu phẩy
+  supervisor  String?  // Tên người giám sát
+  startDate   DateTime
+  endDate     DateTime
+  joinRequests JoinRequest[]
+  status String @default("ONGOING")
+  
+  
+  // Quản lý quyền hạn
+  ownerId     String   // ID của Leader (từ Clerk)
+  members     String[] // Mảng chứa Email của các thành viên được mời
+  supervisors String[] @default([]) //
+
+  // Quan hệ
+  majorItems  MajorItem[]
+  objectives  Objective[]
+  tasks       Task[]
+  costs       Cost[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MajorItem {
+  id        String   @id @default(uuid())
+  name      String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  tasks     Task[]   // Một mục lớn chứa nhiều task
+}
+
+// Tab 2: Mục tiêu dự án
+model Objective {
+  id        String  @id @default(uuid())
+  content   String  // Nội dung mục tiêu
+  color     String? // Màu hiển thị trên OPPM (tùy chọn)
+  
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // Quan hệ với công việc (Task thực hiện mục tiêu nào)
+  tasks     Task[] 
+}
+
+// Tab 3: Công việc (Tasks)
+model Task {
+  id             String   @id @default(uuid())
+  majorItemId    String
+  majorItem      MajorItem @relation(fields: [majorItemId], references: [id], onDelete: Cascade)
+  minorItem      String   // Mục nhỏ (Công việc cụ thể)
+  deadline       DateTime // Thời gian
+  mainResp       String   // Người phụ trách chính (Tên hoặc Email)
+  subResp        String?  // Người phụ trách phụ (nếu có)
+  status         String   @default("TODO") // TODO, IN_PROGRESS, DONE
+  
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Liên kết: Công việc này đáp ứng những mục tiêu nào?
+  objectives     Objective[] 
+}
+
+// Tab 4: Chi phí
+model Cost {
+  id          String   @id @default(uuid())
+  description String   // Nội dung thu/chi
+  amount      Float    // Số tiền
+  type        String   // "INCOME" (Thu) hoặc "EXPENSE" (Chi)
+  
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model JoinRequest {
+  id        String   @id @default(uuid())
+  userEmail String   // Email người xin vào
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userEmail]) // Đảm bảo 1 người không spam nhiều yêu cầu
+}
+
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   
+  content   String   
+  isRead    Boolean  @default(false)
+  link      String?  
+  createdAt DateTime @default(now())
+
+  type      String   @default("INFO") // "INFO" hoặc "JOIN_REQUEST"
+  requestId String?  // ID của bản ghi JoinRequest
+  projectId String?  // ID của dự án liên quan
+}
