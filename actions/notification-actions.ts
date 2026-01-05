@@ -100,7 +100,7 @@ export async function createJoinRequestNotification(projectId: string) {
         link: `/projects/${projectId}`,
         isRead: false,
         type: "JOIN_REQUEST",
-        requestId: request.id,
+        requestId: Request.id,
         projectId: project.id,
       },
     });
