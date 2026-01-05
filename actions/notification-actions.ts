@@ -1,22 +1,22 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { currentUser } from "@clerk/nextjs/server";
 
-// 1. Lấy danh sách thông báo của user đang đăng nhập
+// =========================================================
+// 1. LẤY DANH SÁCH THÔNG BÁO
+// =========================================================
 export async function getNotifications() {
-  const user = await currentUser();
   const { userId } = await auth();
 
   if (!userId) return [];
 
   try {
     const notifications = await db.notification.findMany({
-      where: { userId: userId }, // Chỉ lấy thông báo của mình
-      orderBy: { createdAt: "desc" }, // Cái mới nhất lên đầu
-      take: 20, // Lấy tối đa 20 cái
+      where: { userId: userId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
     });
     return notifications;
   } catch (error) {
@@ -25,70 +25,90 @@ export async function getNotifications() {
   }
 }
 
-// 2. Đánh dấu đã đọc (khi user bấm vào)
+// =========================================================
+// 2. ĐÁNH DẤU ĐÃ ĐỌC (Một cái)
+// =========================================================
 export async function markAsRead(notificationId: string) {
-const user = await currentUser();
-
-  if (!user) {
-    throw new Error("Bạn chưa đăng nhập");
-  }
-  
-  const userEmail = user.emailAddresses[0].emailAddress;
-
-  await db.notification.update({
-    where: { id: notificationId },
-    data: { isRead: true },
-  });
-
-  revalidatePath("/");
+  const { userId } = await auth();
+  if (!userId) return;
 
   try {
-    try {
-  // 👇 1. THÊM ĐOẠN NÀY ĐỂ ĐỊNH NGHĨA BIẾN 'project'
-  const project = await db.project.findUnique({
-    where: {
-      id: projectId, // Biến projectId lấy từ tham số hàm
-    },
-  });
-
-  // Kiểm tra nếu không tìm thấy dự án
-  if (!project) {
-    return { success: false, message: "Không tìm thấy dự án!" };
-  }
-    const requesterName = user.firstName || userEmail;
-
-    // 👇 LOG KIỂM TRA ID LEADER
-    console.log(
-      "🚀 [JoinProject] Đang tạo thông báo cho Leader ID:",
-      project.ownerId
-    );
-
-    await db.notification.create({
-      data: {
-        userId: project.ownerId, // 👈 Đảm bảo gửi đúng ID này
-        content: `${requesterName} muốn tham gia dự án "${project.name}"`,
-        link: `/projects/${projectId}`,
-        isRead: false,
-        type: "JOIN_REQUEST",
-        requestId: request.id,
-        projectId: project.id,
+    await db.notification.update({
+      where: { 
+        id: notificationId,
+        userId: userId // Bảo mật: Chỉ update nếu đúng là thông báo của mình
       },
+      data: { isRead: true },
     });
-    console.log("✅ [JoinProject] Đã tạo thông báo thành công!");
+
+    revalidatePath("/"); // Cập nhật lại giao diện
   } catch (error) {
-    console.error("❌ [JoinProject] Lỗi tạo thông báo:", error);
+    console.error("Lỗi đánh dấu đã đọc:", error);
   }
 }
 
-// 3. Đánh dấu tất cả là đã đọc
+// =========================================================
+// 3. ĐÁNH DẤU TẤT CẢ LÀ ĐÃ ĐỌC
+// =========================================================
 export async function markAllAsRead() {
   const { userId } = await auth();
   if (!userId) return;
 
-  await db.notification.updateMany({
-    where: { userId: userId, isRead: false },
-    data: { isRead: true },
-  });
+  try {
+    await db.notification.updateMany({
+      where: { userId: userId, isRead: false },
+      data: { isRead: true },
+    });
 
-  revalidatePath("/");
+    revalidatePath("/");
+  } catch (error) {
+    console.error("Lỗi đánh dấu tất cả:", error);
+  }
+}
+
+// =========================================================
+// 4. TẠO THÔNG BÁO YÊU CẦU THAM GIA (Hàm riêng biệt)
+// Gọi hàm này từ file project-actions.ts sau khi gửi yêu cầu
+// =========================================================
+export async function createJoinRequestNotification(projectId: string) {
+  // 1. Lấy thông tin người gửi (User hiện tại đang đăng nhập)
+  const user = await currentUser();
+  if (!user) return; // Nếu chưa đăng nhập thì thôi
+
+  const userEmail = user.emailAddresses[0].emailAddress;
+  const requesterName = user.firstName || userEmail;
+
+  try {
+    // 2. Lấy thông tin dự án để biết Leader là ai (ownerId)
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, name: true, ownerId: true } // Chỉ lấy các trường cần thiết
+    });
+
+    if (!project) {
+      console.error("Không tìm thấy dự án để gửi thông báo");
+      return;
+    }
+
+    // 3. Gửi thông báo cho Leader
+    console.log("🚀 Đang gửi thông báo cho Leader ID:", project.ownerId);
+
+    await db.notification.create({
+      data: {
+        userId: project.ownerId, // Người nhận là Leader
+        title: "Yêu cầu tham gia mới", // Tiêu đề
+        message: `${requesterName} muốn tham gia dự án "${project.name}"`, // Nội dung
+        link: `/projects/${project.id}/settings/members`, // Link khi bấm vào
+        type: "JOIN_REQUEST",
+        isRead: false,
+        // Nếu DB của bạn có trường projectId hoặc requestId thì thêm vào dưới đây:
+        // projectId: project.id, 
+      },
+    });
+
+    console.log("✅ Đã tạo thông báo thành công!");
+    
+  } catch (error) {
+    console.error("❌ Lỗi tạo thông báo:", error);
+  }
 }
