@@ -96,7 +96,6 @@ export async function createJoinRequestNotification(projectId: string) {
     await db.notification.create({
       data: {
         userId: project.ownerId, // Người nhận là Leader
-        title: "Yêu cầu tham gia mới", // Tiêu đề
         message: `${requesterName} muốn tham gia dự án "${project.name}"`, // Nội dung
         link: `/projects/${project.id}/settings/members`, // Link khi bấm vào
         type: "JOIN_REQUEST",
