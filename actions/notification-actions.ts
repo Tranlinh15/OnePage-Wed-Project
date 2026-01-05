@@ -43,6 +43,18 @@ const user = await currentUser();
   revalidatePath("/");
 
   try {
+    try {
+  // 👇 1. THÊM ĐOẠN NÀY ĐỂ ĐỊNH NGHĨA BIẾN 'project'
+  const project = await db.project.findUnique({
+    where: {
+      id: projectId, // Biến projectId lấy từ tham số hàm
+    },
+  });
+
+  // Kiểm tra nếu không tìm thấy dự án
+  if (!project) {
+    return { success: false, message: "Không tìm thấy dự án!" };
+  }
     const requesterName = user.firstName || userEmail;
 
     // 👇 LOG KIỂM TRA ID LEADER
