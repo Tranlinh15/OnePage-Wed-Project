@@ -7,6 +7,7 @@ import { currentUser } from "@clerk/nextjs/server";
 
 // 1. Lấy danh sách thông báo của user đang đăng nhập
 export async function getNotifications() {
+  const user = await currentUser();
   const { userId } = await auth();
 
   if (!userId) return [];
