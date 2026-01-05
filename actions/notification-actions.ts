@@ -27,8 +27,13 @@ export async function getNotifications() {
 
 // 2. Đánh dấu đã đọc (khi user bấm vào)
 export async function markAsRead(notificationId: string) {
-  const { userId } = await auth();
-  if (!userId) return;
+const user = await currentUser();
+
+  if (!user) {
+    throw new Error("Bạn chưa đăng nhập");
+  }
+  
+  const userEmail = user.emailAddresses[0].emailAddress;
 
   await db.notification.update({
     where: { id: notificationId },
