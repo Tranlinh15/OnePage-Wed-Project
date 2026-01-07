@@ -13,7 +13,6 @@ import Image from "next/image";
 import { Sparkles, Search, LayoutGrid } from "lucide-react";
 
 export default async function Home() {
-  // --- GIỮ NGUYÊN LOGIC CŨ ---
   const { userId } = await auth();
   const user = await currentUser();
   const userEmail = user?.emailAddresses[0]?.emailAddress;
@@ -71,7 +70,7 @@ export default async function Home() {
                     - Quản lý dự án
                   </span>
                 </h1>
-                {/* Badge Version nhỏ xinh */}
+                {/* Badge Version */}
                 <span className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold px-1.5 py-0.5 rounded-md">
                   v1.0.0
                 </span>
