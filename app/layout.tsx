@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs"; // 👈 IMPORT QUAN TRỌNG
+import { ClerkProvider } from "@clerk/nextjs"; 
 import { Toaster } from "sonner";
-import AIChatButton from "./_components/AIChatButton"; // Nếu bạn đã làm bước Chatbot
+import AIChatButton from "./_components/AIChatButton"; 
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +18,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // 👇 BẮT BUỘC PHẢI BỌC CLERKPROVIDER Ở NGOÀI CÙNG
     <ClerkProvider>
       <html lang="vi">
         <body className={inter.className}>
