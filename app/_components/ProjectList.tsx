@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import ProjectCard from "./ProjectCard";
-// 👇 QUAN TRỌNG: Phải import nút này vào mới dùng được
 import JoinProjectBtn from "./JoinProjectBtn";
 import {
   Search,
